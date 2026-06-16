@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#176a2c">
+  <title>Двадцать одно — Блэкджек</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ====================== ЭКРАН ЗАГРУЗКИ / СТАРТ ====================== -->
+    <section id="screen-loading" class="screen screen-loading">
+      <div class="hero">
+        <div class="hero-cards">
+          <div class="mini-card black" style="--i:-1"><span class="mc-r">10</span><span class="mc-s">♣</span></div>
+          <div class="mini-card red"   style="--i:0"><span class="mc-r">A</span><span class="mc-s">♥</span></div>
+          <div class="mini-card black" style="--i:1"><span class="mc-r">J</span><span class="mc-s">♠</span></div>
+        </div>
+
+        <div class="ribbon">
+          <span class="ribbon-tail left"></span>
+          <span class="ribbon-tail right"></span>
+          <span class="ribbon-bar"><span class="ribbon-text">Двадцать одно</span></span>
+        </div>
+      </div>
+
+      <div class="loading-block">
+        <div class="loading-bar"><i id="loading-fill"></i></div>
+        <p class="loading-hint" id="loading-hint">Загрузка…</p>
+        <button id="btn-play" class="btn btn-primary btn-play" hidden>Играть</button>
+      </div>
+
+      <p class="credit">Карточная игра «21» · работает офлайн · для Яндекс Игр</p>
+    </section>
+
+    <!-- ============================ ЭКРАН ИГРЫ ============================ -->
+    <section id="screen-game" class="screen screen-game" hidden>
+
+      <header class="topbar">
+        <div class="coins" id="coins">
+          <span class="coin-ico">🪙</span><span id="coins-value">1000</span>
+        </div>
+        <div class="top-actions">
+          <button id="btn-stats" class="icon-btn" aria-label="Статистика" title="Статистика">📊</button>
+          <button id="btn-sound" class="icon-btn" aria-label="Звук" title="Звук">🔊</button>
+        </div>
+      </header>
+
+      <main class="table" id="table">
+        <div class="deck-stack" id="deck-stack" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+
+        <section class="hand-area dealer-area" id="dealer-area">
+          <div class="hand-label">Дилер <span class="score-badge" id="dealer-score">0</span></div>
+          <div class="hand" id="dealer-hand"></div>
+        </section>
+
+        <div class="center-status" id="center-status"></div>
+
+        <section class="hand-area player-area" id="player-area">
+          <div class="hand" id="player-hand"></div>
+          <div class="hand-label">Вы <span class="score-badge" id="player-score">0</span></div>
+        </section>
+      </main>
+
+      <footer class="controls" id="controls">
+        <!-- Панель ставки -->
+        <div class="panel bet-panel" id="bet-panel">
+          <div class="bet-display">Ставка <span id="bet-value">0</span></div>
+          <div class="chips" id="chips"></div>
+          <div class="row">
+            <button id="btn-clear-bet" class="btn btn-ghost">Сброс</button>
+            <button id="btn-deal" class="btn btn-primary" disabled>Раздать</button>
+          </div>
+        </div>
+
+        <!-- Панель действий -->
+        <div class="panel action-panel" id="action-panel" hidden>
+          <button id="btn-hit" class="btn btn-action btn-hit">Взять</button>
+          <button id="btn-double" class="btn btn-action btn-double">Удвоить<small>×2</small></button>
+          <button id="btn-stand" class="btn btn-action btn-stand">Хватит</button>
+        </div>
+
+        <!-- Следующая раздача -->
+        <div class="panel next-panel" id="next-panel" hidden>
+          <button id="btn-next" class="btn btn-primary">Следующая раздача</button>
+        </div>
+
+        <!-- Закончились фишки -->
+        <div class="panel broke-panel" id="broke-panel" hidden>
+          <div class="broke-text">Фишки закончились</div>
+          <button id="btn-bonus" class="btn btn-primary">Получить 1000 фишек</button>
+        </div>
+      </footer>
+    </section>
+
+    <!-- =========================== СТАТИСТИКА =========================== -->
+    <div id="modal-stats" class="modal" hidden>
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2>Статистика</h2>
+          <button id="btn-stats-close" class="icon-btn" aria-label="Закрыть">✕</button>
+        </div>
+        <div class="stats-body" id="stats-body"></div>
+        <button id="btn-reset" class="btn btn-ghost btn-reset">Сбросить прогресс</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SDK Яндекс Игр (работает только во фрейме платформы; локально просто отсутствует) -->
+  <script src="https://yandex.ru/games/sdk/v2" onerror="window.__noYaSDK=true"></script>
+
+  <!-- Ядро -->
+  <script src="src/core/Storage.js"></script>
+  <script src="src/core/Haptics.js"></script>
+  <script src="src/core/AudioManager.js"></script>
+  <script src="src/core/AssetManager.js"></script>
+  <script src="src/core/YandexSDK.js"></script>
+  <!-- Логика -->
+  <script src="src/game/Deck.js"></script>
+  <script src="src/game/Hand.js"></script>
+  <script src="src/game/BlackjackEngine.js"></script>
+  <!-- Интерфейс -->
+  <script src="src/ui/CardView.js"></script>
+  <script src="src/ui/Anim.js"></script>
+  <script src="src/ui/UI.js"></script>
+  <!-- Старт -->
+  <script src="src/main.js"></script>
+</body>
+</html>
