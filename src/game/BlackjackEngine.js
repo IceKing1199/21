@@ -220,7 +220,9 @@ BJ.Engine = (function () {
     if (this.balance > s.bestBalance) s.bestBalance = this.balance;
   };
 
-  P._persist = function () {
+  // immediate=true — мгновенный сброс в облако (для начислений/бонусов), чтобы
+  // перезагрузка/реклама не откатили баланс к старому облачному значению.
+  P._persist = function (immediate) {
     var self = this;
     var data = Storage.update(function (data) {
       data.balance = self.balance;
@@ -228,7 +230,7 @@ BJ.Engine = (function () {
     });
     // Дублируем в облако Яндекса (per-player) и отправляем счёт в лидерборд.
     if (BJ.Yandex) {
-      BJ.Yandex.cloudSet(data);
+      BJ.Yandex.cloudSet(data, immediate);
       BJ.Yandex.submitScore(self.balance);
     }
   };
@@ -239,7 +241,7 @@ BJ.Engine = (function () {
     if (amount > 0) {
       this.balance += amount;
       if (this.balance > this.stats.bestBalance) this.stats.bestBalance = this.balance;
-      this._persist();
+      this._persist(true); // мгновенно в облако — начисление не должно теряться
     }
     return this.balance;
   };
@@ -255,7 +257,7 @@ BJ.Engine = (function () {
   P.grantBonus = function () {
     if (this.balance < MIN_BET) {
       this.balance = START_BALANCE;
-      this._persist();
+      this._persist(true);
     }
     return this.balance;
   };

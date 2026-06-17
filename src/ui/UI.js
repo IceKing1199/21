@@ -594,9 +594,10 @@ BJ.UI = (function () {
     window.location.reload();
   }
 
-  /** Сохранить служебные данные (настройки/бонусы) в облако Яндекса. */
-  function pushCloud() {
-    if (Yandex.cloudSet) Yandex.cloudSet(Storage.load());
+  /** Сохранить служебные данные (настройки/бонусы) в облако Яндекса.
+   *  immediate=true — без дебаунса (для бонусов/покупок). */
+  function pushCloud(immediate) {
+    if (Yandex.cloudSet) Yandex.cloudSet(Storage.load(), immediate);
   }
 
   /* =================================================================== ЯЗЫК */
@@ -784,10 +785,14 @@ BJ.UI = (function () {
   }
 
   function onClaimDaily() {
+    // Защита: начисляем только если бонус действительно доступен (на случай
+    // гонок перерисовки/облака — иначе бонус можно было бы взять повторно).
+    var bonus = Storage.load().bonus;
+    if ((Date.now() - (bonus.dailyAt || 0)) < DAY_MS) { renderShop(); return; }
     Audio.play('chip');
     Haptics.tap();
     Storage.update(function (d) { d.bonus.dailyAt = Date.now(); });
-    pushCloud();
+    pushCloud(true);           // мгновенно фиксируем в облаке
     creditAndRefresh(DAILY_AMOUNT);
   }
 
@@ -804,6 +809,7 @@ BJ.UI = (function () {
   // Последовательно показываем PACK_ADS реклам; награда — только если все
   // просмотрены полностью. Прогресс пишем в подпись кнопки.
   function onWatchPack() {
+    if (packTimesInHour().length >= PACK_PER_HOUR) { renderShop(); return; }
     var rewarded = 0;
     var k = 0;
     var btn = document.getElementById('shop-pack');
@@ -814,17 +820,18 @@ BJ.UI = (function () {
 
     function playNext() {
       if (k >= PACK_ADS) {
-        if (rewarded >= PACK_ADS) {
+        // Защита: лимит 2 раза в час проверяем повторно перед начислением.
+        if (rewarded >= PACK_ADS && packTimesInHour().length < PACK_PER_HOUR) {
           Storage.update(function (d) {
             var now = Date.now();
             var arr = (d.bonus.packTimes || []).filter(function (ts) { return now - ts < HOUR_MS; });
             arr.push(now);
             d.bonus.packTimes = arr;
           });
-          pushCloud();
+          pushCloud(true);           // мгновенно фиксируем в облаке
           creditAndRefresh(PACK_AMOUNT);
         } else {
-          renderShop(); // не досмотрел — без награды
+          renderShop(); // не досмотрел или лимит — без награды
         }
         return;
       }

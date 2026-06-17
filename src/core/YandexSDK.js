@@ -139,10 +139,16 @@ BJ.Yandex = (function () {
         .catch(function () { return null; });
     },
 
-    /** Сохранить данные в облако (с дебаунсом, чтобы не спамить SDK). */
-    cloudSet: function (data) {
+    /** Сохранить данные в облако. immediate=true — без дебаунса (для важных
+     *  начислений: бонусы/покупки), чтобы перезагрузка не откатила прогресс. */
+    cloudSet: function (data, immediate) {
       if (!player || !player.setData) return;
       pendingData = data;
+      if (immediate) {
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+        flushSave();
+        return;
+      }
       if (saveTimer) return;
       saveTimer = setTimeout(flushSave, 1500);
     },
