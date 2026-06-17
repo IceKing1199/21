@@ -93,6 +93,12 @@ BJ.Storage = (function () {
       var fresh = deepMerge(DEFAULTS, {});
       write(fresh);
       return fresh;
+    },
+    /** Слить внешние данные (напр. облачное сохранение) поверх текущих и сохранить. */
+    merge: function (extra) {
+      var data = deepMerge(read(), extra || {});
+      write(data);
+      return data;
     }
   };
 })();

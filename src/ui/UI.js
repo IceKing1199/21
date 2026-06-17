@@ -43,14 +43,15 @@ BJ.UI = (function () {
   function cacheEls() {
     [
       'screen-loading', 'screen-game', 'loading-fill', 'btn-play', 'loading-hint',
-      'coins-value', 'coins', 'btn-stats', 'btn-sound',
+      'coins-value', 'coins', 'btn-stats', 'btn-sound', 'btn-leaders',
       'dealer-hand', 'player-hand', 'dealer-score', 'player-score',
       'dealer-area', 'player-area', 'center-status', 'deck-stack', 'table',
       'controls', 'bet-panel', 'bet-value', 'chips', 'btn-clear-bet', 'btn-deal',
       'action-panel', 'btn-hit', 'btn-double', 'btn-stand',
       'next-panel', 'btn-next',
       'broke-panel', 'btn-bonus',
-      'modal-stats', 'stats-body', 'btn-stats-close', 'btn-reset'
+      'modal-stats', 'stats-body', 'btn-stats-close', 'btn-reset',
+      'modal-leaders', 'leaders-body', 'btn-leaders-close', 'btn-leaders-auth'
     ].forEach(function (id) {
       els[id] = $(id);
     });
@@ -475,6 +476,77 @@ BJ.UI = (function () {
     els['modal-stats'].hidden = true;
   }
 
+  /* ----------------------------------------------------- таблица лидеров UI */
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function renderLeaders(entries) {
+    if (!entries || !entries.length) {
+      els['leaders-body'].innerHTML =
+        '<div class="leaders-empty">Пока никого нет — сыграйте раздачу, ' +
+        'чтобы попасть в таблицу лидеров!</div>';
+      return;
+    }
+    els['leaders-body'].innerHTML = entries.map(function (e) {
+      var name = e.name ? escapeHtml(e.name) : 'Аноним';
+      return '<div class="leader-row' + (e.isCurrent ? ' me' : '') + '">' +
+        '<span class="lead-rank">' + e.rank + '</span>' +
+        '<span class="lead-name">' + name + '</span>' +
+        '<b class="lead-score">' + e.score + '</b>' +
+        '</div>';
+    }).join('');
+  }
+
+  function refreshLeaders() {
+    // Кнопка входа — только для незалогиненных игроков внутри Яндекса.
+    els['btn-leaders-auth'].hidden = !Yandex.hasSDK() || Yandex.isAuthorized();
+    Yandex.getLeaderboard().then(function (entries) {
+      if (entries === null) {
+        els['leaders-body'].innerHTML =
+          '<div class="leaders-empty">Таблица лидеров доступна в Яндекс&nbsp;Играх.</div>';
+        return;
+      }
+      renderLeaders(entries);
+    });
+  }
+
+  function openLeaders() {
+    Audio.play('click');
+    els['leaders-body'].innerHTML = '<div class="leaders-empty">Загрузка…</div>';
+    els['modal-leaders'].hidden = false;
+    refreshLeaders();
+  }
+
+  function closeLeaders() {
+    Audio.play('click');
+    els['modal-leaders'].hidden = true;
+  }
+
+  function onLeadersAuth() {
+    Audio.play('click');
+    Yandex.openAuth().then(function () {
+      // После входа отправим текущий счёт и обновим таблицу.
+      Yandex.submitScore(engine.getBalance());
+      refreshLeaders();
+    });
+  }
+
+  /** Подтянуть облачное сохранение игрока (Яндекс) поверх локального кэша. */
+  function syncFromCloud() {
+    return Yandex.cloudGet().then(function (data) {
+      if (!data) return;
+      // Облако — источник истины для баланса/статистики этого игрока.
+      Storage.merge({ balance: data.balance, stats: data.stats });
+      engine.applySave();
+      var save = Storage.load();
+      if (save.settings && save.settings.lastBet) state.currentBet = save.settings.lastBet;
+      updateCoins(false);
+    }).catch(function () {});
+  }
+
   function resetProgress() {
     if (!window.confirm('Сбросить весь прогресс и статистику?')) return;
     Storage.reset();
@@ -496,6 +568,12 @@ BJ.UI = (function () {
     els['btn-reset'].addEventListener('click', resetProgress);
     els['modal-stats'].addEventListener('click', function (e) {
       if (e.target === els['modal-stats']) closeStats();
+    });
+    els['btn-leaders'].addEventListener('click', openLeaders);
+    els['btn-leaders-close'].addEventListener('click', closeLeaders);
+    els['btn-leaders-auth'].addEventListener('click', onLeadersAuth);
+    els['modal-leaders'].addEventListener('click', function (e) {
+      if (e.target === els['modal-leaders']) closeLeaders();
     });
     // Разблокировка звука по первому касанию в любом месте.
     document.addEventListener('pointerdown', function once() {
@@ -530,6 +608,9 @@ BJ.UI = (function () {
 
       els['btn-play'].addEventListener('click', startGame);
     },
+
+    /** Синхронизация облачного сохранения (вызывается из main.js после init SDK). */
+    syncFromCloud: syncFromCloud,
 
     /** Прогресс предзагрузки для стартового экрана. */
     setLoadingProgress: function (done, total) {

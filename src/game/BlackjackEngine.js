@@ -222,10 +222,22 @@ BJ.Engine = (function () {
 
   P._persist = function () {
     var self = this;
-    Storage.update(function (data) {
+    var data = Storage.update(function (data) {
       data.balance = self.balance;
       data.stats = self.stats;
     });
+    // Дублируем в облако Яндекса (per-player) и отправляем счёт в лидерборд.
+    if (BJ.Yandex) {
+      BJ.Yandex.cloudSet(data);
+      BJ.Yandex.submitScore(self.balance);
+    }
+  };
+
+  /** Перечитать баланс и статистику из Storage (после загрузки облачного сейва). */
+  P.applySave = function () {
+    var save = Storage.load();
+    this.balance = save.balance;
+    this.stats = save.stats;
   };
 
   /** Выдать бонусные фишки, если игрок остался без денег (никогда не тупик). */

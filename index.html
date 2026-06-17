@@ -43,6 +43,7 @@
           <span class="coin-ico">🪙</span><span id="coins-value">1000</span>
         </div>
         <div class="top-actions">
+          <button id="btn-leaders" class="icon-btn" aria-label="Лидеры" title="Таблица лидеров">🏆</button>
           <button id="btn-stats" class="icon-btn" aria-label="Статистика" title="Статистика">📊</button>
           <button id="btn-sound" class="icon-btn" aria-label="Звук" title="Звук">🔊</button>
         </div>
@@ -106,6 +107,18 @@
         </div>
         <div class="stats-body" id="stats-body"></div>
         <button id="btn-reset" class="btn btn-ghost btn-reset">Сбросить прогресс</button>
+      </div>
+    </div>
+
+    <!-- =========================== ТАБЛИЦА ЛИДЕРОВ =========================== -->
+    <div id="modal-leaders" class="modal" hidden>
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2>Лидеры по фишкам</h2>
+          <button id="btn-leaders-close" class="icon-btn" aria-label="Закрыть">✕</button>
+        </div>
+        <div class="leaders-body" id="leaders-body"></div>
+        <button id="btn-leaders-auth" class="btn btn-primary btn-leaders-auth" hidden>Войти, чтобы участвовать</button>
       </div>
     </div>
 

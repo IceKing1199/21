@@ -487,6 +487,30 @@ body {
 .stat-row b { font-family: var(--font-display); font-size: 16px; }
 .btn-reset { width: 100%; margin-top: 16px; }
 
+/* ----------------------------- таблица лидеров ----------------------------- */
+.leaders-body { display: flex; flex-direction: column; gap: 2px; min-height: 60px; }
+.leaders-empty {
+  color: var(--muted); text-align: center; padding: 22px 6px; font-size: 15px; line-height: 1.5;
+}
+.leader-row {
+  display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px;
+  padding: 9px 8px; border-bottom: 1px solid rgba(255,255,255,.1); font-size: 15px;
+}
+.leader-row .lead-rank {
+  font-family: var(--font-display); color: var(--muted); text-align: center;
+}
+.leader-row .lead-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leader-row .lead-score { font-family: var(--font-display); font-size: 16px; }
+.leader-row:nth-child(1) .lead-rank,
+.leader-row:nth-child(2) .lead-rank,
+.leader-row:nth-child(3) .lead-rank { color: #ffd45e; }
+.leader-row.me {
+  background: rgba(255, 212, 94, .14);
+  border-radius: 10px; border-bottom-color: transparent;
+}
+.leader-row.me .lead-name { font-weight: 700; }
+.btn-leaders-auth { width: 100%; margin-top: 16px; }
+
 /* ============================== АДАПТИВ ============================== */
 /* Узкие телефоны — компактнее */
 @media (max-height: 680px) {
