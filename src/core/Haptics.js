@@ -23,6 +23,7 @@ BJ.Haptics = (function () {
 
   return {
     isSupported: function () { return supported; },
+    isEnabled: function () { return enabled; },
     setEnabled: function (v) { enabled = !!v; },
     tap:   function () { buzz(8); },        // лёгкий клик по кнопке
     deal:  function () { buzz(12); },       // карта легла на стол

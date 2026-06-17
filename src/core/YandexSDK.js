@@ -187,6 +187,37 @@ BJ.Yandex = (function () {
         .catch(function () { return null; });
     },
 
+    /** Язык окружения Яндекс Игр (напр. 'ru', 'en'); null, если SDK нет. */
+    getLang: function () {
+      if (!ysdk || !ysdk.environment || !ysdk.environment.i18n) return null;
+      try { return ysdk.environment.i18n.lang || null; } catch (e) { return null; }
+    },
+
+    /**
+     * Реклама с вознаграждением (rewarded video). Фишки начисляются ТОЛЬКО в
+     * onRewarded (полный просмотр). Если SDK/реклама недоступны — onError.
+     */
+    showRewardedVideo: function (cbs) {
+      cbs = cbs || {};
+      var rewarded = false;
+      if (!ysdk || !ysdk.adv || !ysdk.adv.showRewardedVideo) {
+        if (cbs.onError) cbs.onError();
+        return;
+      }
+      var ok = false;
+      safe(function () {
+        ok = true;
+        ysdk.adv.showRewardedVideo({
+          callbacks: {
+            onRewarded: function () { rewarded = true; if (cbs.onRewarded) cbs.onRewarded(); },
+            onClose: function () { if (cbs.onClose) cbs.onClose(rewarded); },
+            onError: function () { if (cbs.onError) cbs.onError(); }
+          }
+        });
+      });
+      if (!ok && cbs.onError) cbs.onError();
+    },
+
     /**
      * Полноэкранная реклама между раундами. Звук игры приглушается на время показа.
      * Колбэки необязательны. Если SDK нет — onClose вызывается сразу.

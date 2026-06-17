@@ -22,17 +22,26 @@
         <div class="ribbon">
           <span class="ribbon-tail left"></span>
           <span class="ribbon-tail right"></span>
-          <span class="ribbon-bar"><span class="ribbon-text">Двадцать одно</span></span>
+          <span class="ribbon-bar"><span class="ribbon-text" data-i18n="brand">Двадцать одно</span></span>
         </div>
       </div>
 
       <div class="loading-block">
         <div class="loading-bar"><i id="loading-fill"></i></div>
         <p class="loading-hint" id="loading-hint">Загрузка…</p>
-        <button id="btn-play" class="btn btn-primary btn-play" hidden>Играть</button>
+
+        <!-- Слева магазин, по центру «Играть», справа настройки -->
+        <div class="start-actions">
+          <button id="btn-shop" class="icon-btn start-icon" data-i18n-aria="shop.title" data-i18n-title="shop.title" aria-label="Магазин фишек" title="Магазин фишек">🛒</button>
+          <button id="btn-play" class="btn btn-primary btn-play" data-i18n="start.play" hidden>Играть</button>
+          <button id="btn-settings" class="icon-btn start-icon" data-i18n-aria="settings.title" data-i18n-title="settings.title" aria-label="Настройки" title="Настройки">⚙️</button>
+        </div>
+
+        <!-- Правила под кнопкой «Играть» -->
+        <button id="btn-rules" class="btn btn-ghost btn-rules" data-i18n="start.rules">Правила</button>
       </div>
 
-      <p class="credit">Карточная игра «21» · работает офлайн · для Яндекс Игр</p>
+      <p class="credit" data-i18n="credit">Карточная игра «21» · работает офлайн · для Яндекс Игр</p>
     </section>
 
     <!-- ============================ ЭКРАН ИГРЫ ============================ -->
@@ -43,9 +52,9 @@
           <span class="coin-ico">🪙</span><span id="coins-value">1000</span>
         </div>
         <div class="top-actions">
-          <button id="btn-leaders" class="icon-btn" aria-label="Лидеры" title="Таблица лидеров">🏆</button>
-          <button id="btn-stats" class="icon-btn" aria-label="Статистика" title="Статистика">📊</button>
-          <button id="btn-sound" class="icon-btn" aria-label="Звук" title="Звук">🔊</button>
+          <button id="btn-leaders" class="icon-btn" data-i18n-aria="top.leaders" data-i18n-title="top.leaders" aria-label="Таблица лидеров" title="Таблица лидеров">🏆</button>
+          <button id="btn-stats" class="icon-btn" data-i18n-aria="top.stats" data-i18n-title="top.stats" aria-label="Статистика" title="Статистика">📊</button>
+          <button id="btn-sound" class="icon-btn" data-i18n-aria="top.sound" data-i18n-title="top.sound" aria-label="Звук" title="Звук">🔊</button>
         </div>
       </header>
 
@@ -55,7 +64,7 @@
         </div>
 
         <section class="hand-area dealer-area" id="dealer-area">
-          <div class="hand-label">Дилер <span class="score-badge" id="dealer-score">0</span></div>
+          <div class="hand-label"><span data-i18n="table.dealer">Дилер</span> <span class="score-badge" id="dealer-score">0</span></div>
           <div class="hand" id="dealer-hand"></div>
         </section>
 
@@ -63,37 +72,37 @@
 
         <section class="hand-area player-area" id="player-area">
           <div class="hand" id="player-hand"></div>
-          <div class="hand-label">Вы <span class="score-badge" id="player-score">0</span></div>
+          <div class="hand-label"><span data-i18n="table.you">Вы</span> <span class="score-badge" id="player-score">0</span></div>
         </section>
       </main>
 
       <footer class="controls" id="controls">
         <!-- Панель ставки -->
         <div class="panel bet-panel" id="bet-panel">
-          <div class="bet-display">Ставка <span id="bet-value">0</span></div>
+          <div class="bet-display"><span data-i18n="bet.label">Ставка</span> <span id="bet-value">0</span></div>
           <div class="chips" id="chips"></div>
           <div class="row">
-            <button id="btn-clear-bet" class="btn btn-ghost">Сброс</button>
-            <button id="btn-deal" class="btn btn-primary" disabled>Раздать</button>
+            <button id="btn-clear-bet" class="btn btn-ghost" data-i18n="action.clear">Сброс</button>
+            <button id="btn-deal" class="btn btn-primary" data-i18n="action.deal" disabled>Раздать</button>
           </div>
         </div>
 
         <!-- Панель действий -->
         <div class="panel action-panel" id="action-panel" hidden>
-          <button id="btn-hit" class="btn btn-action btn-hit">Взять</button>
-          <button id="btn-double" class="btn btn-action btn-double">Удвоить<small>×2</small></button>
-          <button id="btn-stand" class="btn btn-action btn-stand">Хватит</button>
+          <button id="btn-hit" class="btn btn-action btn-hit" data-i18n="action.hit">Взять</button>
+          <button id="btn-double" class="btn btn-action btn-double"><span data-i18n="action.double">Удвоить</span><small>×2</small></button>
+          <button id="btn-stand" class="btn btn-action btn-stand" data-i18n="action.stand">Хватит</button>
         </div>
 
         <!-- Следующая раздача -->
         <div class="panel next-panel" id="next-panel" hidden>
-          <button id="btn-next" class="btn btn-primary">Следующая раздача</button>
+          <button id="btn-next" class="btn btn-primary" data-i18n="action.next">Следующая раздача</button>
         </div>
 
         <!-- Закончились фишки -->
         <div class="panel broke-panel" id="broke-panel" hidden>
-          <div class="broke-text">Фишки закончились</div>
-          <button id="btn-bonus" class="btn btn-primary">Получить 1000 фишек</button>
+          <div class="broke-text" data-i18n="broke.title">Фишки закончились</div>
+          <button id="btn-bonus" class="btn btn-primary" data-i18n="broke.bonus">Получить 1000 фишек</button>
         </div>
       </footer>
     </section>
@@ -102,11 +111,11 @@
     <div id="modal-stats" class="modal" hidden>
       <div class="modal-card">
         <div class="modal-head">
-          <h2>Статистика</h2>
-          <button id="btn-stats-close" class="icon-btn" aria-label="Закрыть">✕</button>
+          <h2 data-i18n="stats.title">Статистика</h2>
+          <button id="btn-stats-close" class="icon-btn" data-i18n-aria="common.close" aria-label="Закрыть">✕</button>
         </div>
         <div class="stats-body" id="stats-body"></div>
-        <button id="btn-reset" class="btn btn-ghost btn-reset">Сбросить прогресс</button>
+        <button id="btn-reset" class="btn btn-ghost btn-reset" data-i18n="stats.reset">Сбросить прогресс</button>
       </div>
     </div>
 
@@ -114,11 +123,44 @@
     <div id="modal-leaders" class="modal" hidden>
       <div class="modal-card">
         <div class="modal-head">
-          <h2>Лидеры по фишкам</h2>
-          <button id="btn-leaders-close" class="icon-btn" aria-label="Закрыть">✕</button>
+          <h2 data-i18n="leaders.title">Лидеры по фишкам</h2>
+          <button id="btn-leaders-close" class="icon-btn" data-i18n-aria="common.close" aria-label="Закрыть">✕</button>
         </div>
         <div class="leaders-body" id="leaders-body"></div>
-        <button id="btn-leaders-auth" class="btn btn-primary btn-leaders-auth" hidden>Войти, чтобы участвовать</button>
+        <button id="btn-leaders-auth" class="btn btn-primary btn-leaders-auth" data-i18n="leaders.auth" hidden>Войти, чтобы участвовать</button>
+      </div>
+    </div>
+
+    <!-- =========================== ПРАВИЛА =========================== -->
+    <div id="modal-rules" class="modal" hidden>
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2 data-i18n="rules.title">Правила игры</h2>
+          <button id="btn-rules-close" class="icon-btn" data-i18n-aria="common.close" aria-label="Закрыть">✕</button>
+        </div>
+        <div class="rules-body" id="rules-body"></div>
+      </div>
+    </div>
+
+    <!-- =========================== НАСТРОЙКИ =========================== -->
+    <div id="modal-settings" class="modal" hidden>
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2 data-i18n="settings.title">Настройки</h2>
+          <button id="btn-settings-close" class="icon-btn" data-i18n-aria="common.close" aria-label="Закрыть">✕</button>
+        </div>
+        <div class="settings-body" id="settings-body"></div>
+      </div>
+    </div>
+
+    <!-- =========================== МАГАЗИН ФИШЕК =========================== -->
+    <div id="modal-shop" class="modal" hidden>
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2 data-i18n="shop.title">Магазин фишек</h2>
+          <button id="btn-shop-close" class="icon-btn" data-i18n-aria="common.close" aria-label="Закрыть">✕</button>
+        </div>
+        <div class="shop-body" id="shop-body"></div>
       </div>
     </div>
 
@@ -129,6 +171,7 @@
 
   <!-- Ядро -->
   <script src="src/core/Storage.js"></script>
+  <script src="src/core/I18n.js"></script>
   <script src="src/core/Haptics.js"></script>
   <script src="src/core/AudioManager.js"></script>
   <script src="src/core/AssetManager.js"></script>

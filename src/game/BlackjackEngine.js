@@ -233,6 +233,17 @@ BJ.Engine = (function () {
     }
   };
 
+  /** Начислить фишки (магазин/бонус) и сохранить везде (локально, облако, лидерборд). */
+  P.creditChips = function (amount) {
+    amount = Math.floor(amount || 0);
+    if (amount > 0) {
+      this.balance += amount;
+      if (this.balance > this.stats.bestBalance) this.stats.bestBalance = this.balance;
+      this._persist();
+    }
+    return this.balance;
+  };
+
   /** Перечитать баланс и статистику из Storage (после загрузки облачного сейва). */
   P.applySave = function () {
     var save = Storage.load();

@@ -511,6 +511,66 @@ body {
 .leader-row.me .lead-name { font-weight: 700; }
 .btn-leaders-auth { width: 100%; margin-top: 16px; }
 
+/* ----------------------- старт-экран: магазин/играть/настройки ----------------------- */
+.start-actions {
+  display: flex; align-items: center; justify-content: center;
+  gap: 14px; width: 100%;
+}
+.start-icon {
+  width: 54px; height: 54px; font-size: 24px; flex: 0 0 auto;
+  background: rgba(255, 255, 255, .16);
+}
+.start-icon:hover { background: rgba(255, 255, 255, .24); }
+.start-actions .btn-play { flex: 1 1 auto; padding: 16px 24px; max-width: 220px; }
+.btn-rules { margin-top: 2px; }
+
+/* -------------------------------- правила -------------------------------- */
+.rules-body { display: flex; flex-direction: column; gap: 10px; }
+.rule-line {
+  margin: 0; font-size: 15px; line-height: 1.5; color: var(--cream);
+  padding-left: 18px; position: relative;
+}
+.rule-line::before {
+  content: '♠'; position: absolute; left: 0; top: 0; color: var(--gold); opacity: .8;
+}
+
+/* ------------------------------- настройки ------------------------------- */
+.settings-body { display: flex; flex-direction: column; gap: 14px; }
+.set-group .set-label { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+.lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lang-btn {
+  font-family: var(--font-display); font-weight: 700; color: #fff; cursor: pointer;
+  padding: 10px 8px; border-radius: 12px; font-size: 15px;
+  background: rgba(255, 255, 255, .12); border: 1.5px solid transparent;
+}
+.lang-btn:hover { background: rgba(255, 255, 255, .2); }
+.lang-btn.active {
+  background: linear-gradient(180deg, var(--orange-l), var(--orange-d));
+  border-color: rgba(255, 255, 255, .35);
+}
+.set-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 2px; font-size: 15px;
+}
+.toggle {
+  font-family: var(--font-display); font-weight: 700; color: #fff; cursor: pointer;
+  min-width: 64px; padding: 8px 14px; border-radius: 99px; border: none;
+  background: rgba(0, 0, 0, .28);
+}
+.toggle.on { background: linear-gradient(180deg, var(--orange-l), var(--orange-d)); }
+
+/* ----------------------------- магазин фишек ----------------------------- */
+.shop-body { display: flex; flex-direction: column; gap: 12px; }
+.shop-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px; border-radius: 14px;
+  background: rgba(0, 0, 0, .18); border: 1px solid rgba(255, 255, 255, .1);
+}
+.shop-text { display: flex; flex-direction: column; gap: 2px; }
+.shop-text b { font-family: var(--font-display); font-size: 17px; }
+.shop-text span { color: var(--muted); font-size: 13px; }
+.shop-btn { flex: 0 0 auto; padding: 10px 16px; font-size: 15px; min-width: 104px; }
+
 /* ============================== АДАПТИВ ============================== */
 /* Узкие телефоны — компактнее */
 @media (max-height: 680px) {

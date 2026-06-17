@@ -17,25 +17,40 @@ BJ.UI = (function () {
   var Haptics = BJ.Haptics;
   var Storage = BJ.Storage;
   var Yandex = BJ.Yandex;
+  var I18n = BJ.I18n;
 
   var CHIPS = [10, 25, 50, 100, 500];
 
+  // Тексты исхода берутся из i18n по ключу outcome.*; cls — CSS-классы баннера.
   var OUTCOME_TEXT = {
-    blackjack:   { title: 'Блэкджек!',        cls: 'win gold' },
-    win:         { title: 'Вы выиграли',      cls: 'win' },
-    dealer_bust: { title: 'Перебор у дилера!', cls: 'win' },
-    push:        { title: 'Ничья',            cls: 'push' },
-    lose:        { title: 'Дилер выиграл',    cls: 'lose' },
-    bust:        { title: 'Перебор',          cls: 'lose' }
+    blackjack:   { key: 'outcome.blackjack',   cls: 'win gold' },
+    win:         { key: 'outcome.win',         cls: 'win' },
+    dealer_bust: { key: 'outcome.dealer_bust', cls: 'win' },
+    push:        { key: 'outcome.push',        cls: 'push' },
+    lose:        { key: 'outcome.lose',        cls: 'lose' },
+    bust:        { key: 'outcome.bust',        cls: 'lose' }
   };
+
+  // Магазин/бонусы.
+  var DAY_MS = 24 * 60 * 60 * 1000;
+  var HOUR_MS = 60 * 60 * 1000;
+  var DAILY_AMOUNT = 500;
+  var AD1_AMOUNT = 1000;
+  var PACK_AMOUNT = 5000;
+  var PACK_ADS = 3;       // сколько реклам в пакете
+  var PACK_PER_HOUR = 2;  // лимит выдач пакета в час
+
+  function t(key, params) { return I18n.t(key, params); }
 
   var engine;
   var els = {};
+  var shopTimer = null;   // интервал обновления отсчётов в магазине
   var state = {
     busy: false,        // идёт анимация — блокируем ввод
     currentBet: 50,
     roundsSinceAd: 0,
-    lastAdTime: 0
+    lastAdTime: 0,
+    lastResult: null    // последний итог раунда (для перерисовки при смене языка)
   };
 
   function $(id) { return document.getElementById(id); }
@@ -51,7 +66,11 @@ BJ.UI = (function () {
       'next-panel', 'btn-next',
       'broke-panel', 'btn-bonus',
       'modal-stats', 'stats-body', 'btn-stats-close', 'btn-reset',
-      'modal-leaders', 'leaders-body', 'btn-leaders-close', 'btn-leaders-auth'
+      'modal-leaders', 'leaders-body', 'btn-leaders-close', 'btn-leaders-auth',
+      'btn-shop', 'btn-settings', 'btn-rules',
+      'modal-rules', 'rules-body', 'btn-rules-close',
+      'modal-settings', 'settings-body', 'btn-settings-close',
+      'modal-shop', 'shop-body', 'btn-shop-close'
     ].forEach(function (id) {
       els[id] = $(id);
     });
@@ -66,7 +85,7 @@ BJ.UI = (function () {
       chip.type = 'button';
       chip.dataset.value = value;
       chip.innerHTML = '<span class="chip-inner">' + value + '</span>';
-      chip.setAttribute('aria-label', 'Поставить ' + value);
+      chip.setAttribute('aria-label', t('bet.place', { v: value }));
       chip.addEventListener('click', function () { addChip(value); });
       els.chips.appendChild(chip);
     });
@@ -155,6 +174,7 @@ BJ.UI = (function () {
   }
 
   function clearStatus() {
+    state.lastResult = null;
     els['center-status'].innerHTML = '';
     els['center-status'].className = 'center-status';
     els['dealer-area'].classList.remove('glow-win', 'glow-lose');
@@ -351,19 +371,20 @@ BJ.UI = (function () {
   }
 
   function showResult(result) {
+    state.lastResult = result;
     var meta = OUTCOME_TEXT[result.outcome] || OUTCOME_TEXT.push;
     var banner = document.createElement('div');
     banner.className = 'result-banner ' + meta.cls;
 
     var title = document.createElement('div');
     title.className = 'result-title';
-    title.textContent = meta.title;
+    title.textContent = t(meta.key);
 
     var sub = document.createElement('div');
     sub.className = 'result-net';
-    if (result.net > 0) sub.textContent = '+' + result.net + ' фишек';
-    else if (result.net < 0) sub.textContent = '−' + Math.abs(result.net) + ' фишек';
-    else sub.textContent = 'Ставка возвращена';
+    if (result.net > 0) sub.textContent = t('result.win', { n: result.net });
+    else if (result.net < 0) sub.textContent = t('result.lose', { n: Math.abs(result.net) });
+    else sub.textContent = t('result.push');
 
     banner.appendChild(title);
     banner.appendChild(sub);
@@ -442,32 +463,37 @@ BJ.UI = (function () {
   function toggleSound() {
     var on = !Audio.isEnabled();
     Audio.setEnabled(on);
-    Haptics.setEnabled(on);
-    Storage.update(function (d) { d.settings.sound = on; d.settings.haptics = on; });
+    Storage.update(function (d) { d.settings.sound = on; });
+    pushCloud();
     refreshSoundButton();
     if (on) Audio.play('click');
   }
 
   /* --------------------------------------------------------- статистика UI */
-  function openStats() {
-    Audio.play('click');
+  function renderStats() {
     var s = engine.getStats();
     var rate = s.hands ? Math.round((s.wins / s.hands) * 100) : 0;
+    var chips = t('unit.chips');
     var rows = [
-      ['Сыграно раздач', s.hands],
-      ['Побед', s.wins],
-      ['Поражений', s.losses],
-      ['Ничьих', s.pushes],
-      ['Блэкджеков', s.blackjacks],
-      ['Процент побед', rate + '%'],
-      ['Лучшая серия побед', s.bestStreak],
-      ['Крупнейший выигрыш', s.biggestWin + ' фишек'],
-      ['Рекорд баланса', s.bestBalance + ' фишек'],
-      ['Текущий баланс', engine.getBalance() + ' фишек']
+      [t('stats.hands'), s.hands],
+      [t('stats.wins'), s.wins],
+      [t('stats.losses'), s.losses],
+      [t('stats.pushes'), s.pushes],
+      [t('stats.blackjacks'), s.blackjacks],
+      [t('stats.winrate'), rate + '%'],
+      [t('stats.beststreak'), s.bestStreak],
+      [t('stats.biggestwin'), s.biggestWin + ' ' + chips],
+      [t('stats.bestbalance'), s.bestBalance + ' ' + chips],
+      [t('stats.current'), engine.getBalance() + ' ' + chips]
     ];
     els['stats-body'].innerHTML = rows.map(function (r) {
-      return '<div class="stat-row"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>';
+      return '<div class="stat-row"><span>' + escapeHtml(r[0]) + '</span><b>' + escapeHtml(r[1]) + '</b></div>';
     }).join('');
+  }
+
+  function openStats() {
+    Audio.play('click');
+    renderStats();
     els['modal-stats'].hidden = false;
   }
 
@@ -486,12 +512,11 @@ BJ.UI = (function () {
   function renderLeaders(entries) {
     if (!entries || !entries.length) {
       els['leaders-body'].innerHTML =
-        '<div class="leaders-empty">Пока никого нет — сыграйте раздачу, ' +
-        'чтобы попасть в таблицу лидеров!</div>';
+        '<div class="leaders-empty">' + escapeHtml(t('leaders.empty')) + '</div>';
       return;
     }
     els['leaders-body'].innerHTML = entries.map(function (e) {
-      var name = e.name ? escapeHtml(e.name) : 'Аноним';
+      var name = e.name ? escapeHtml(e.name) : escapeHtml(t('leaders.anon'));
       return '<div class="leader-row' + (e.isCurrent ? ' me' : '') + '">' +
         '<span class="lead-rank">' + e.rank + '</span>' +
         '<span class="lead-name">' + name + '</span>' +
@@ -506,7 +531,7 @@ BJ.UI = (function () {
     Yandex.getLeaderboard().then(function (entries) {
       if (entries === null) {
         els['leaders-body'].innerHTML =
-          '<div class="leaders-empty">Таблица лидеров доступна в Яндекс&nbsp;Играх.</div>';
+          '<div class="leaders-empty">' + escapeHtml(t('leaders.unavailable')) + '</div>';
         return;
       }
       renderLeaders(entries);
@@ -515,7 +540,7 @@ BJ.UI = (function () {
 
   function openLeaders() {
     Audio.play('click');
-    els['leaders-body'].innerHTML = '<div class="leaders-empty">Загрузка…</div>';
+    els['leaders-body'].innerHTML = '<div class="leaders-empty">' + escapeHtml(t('common.loading')) + '</div>';
     els['modal-leaders'].hidden = false;
     refreshLeaders();
   }
@@ -538,19 +563,300 @@ BJ.UI = (function () {
   function syncFromCloud() {
     return Yandex.cloudGet().then(function (data) {
       if (!data) return;
-      // Облако — источник истины для баланса/статистики этого игрока.
-      Storage.merge({ balance: data.balance, stats: data.stats });
+      // Облако — источник истины для баланса/статистики/настроек/бонусов игрока.
+      Storage.merge({
+        balance: data.balance,
+        stats: data.stats,
+        settings: data.settings,
+        bonus: data.bonus
+      });
       engine.applySave();
       var save = Storage.load();
       if (save.settings && save.settings.lastBet) state.currentBet = save.settings.lastBet;
+      // Язык: явный выбор из облака применяем; иначе берём язык окружения Яндекса.
+      if (save.settings && save.settings.lang) {
+        I18n.setLang(save.settings.lang);
+      } else {
+        I18n.detectInitial();
+        applyLang();
+      }
+      // Звук/вибро могли прийти из облака.
+      Audio.setEnabled(save.settings.sound !== false);
+      Haptics.setEnabled(save.settings.haptics !== false);
+      refreshSoundButton();
       updateCoins(false);
     }).catch(function () {});
   }
 
   function resetProgress() {
-    if (!window.confirm('Сбросить весь прогресс и статистику?')) return;
+    if (!window.confirm(t('stats.resetConfirm'))) return;
     Storage.reset();
     window.location.reload();
+  }
+
+  /** Сохранить служебные данные (настройки/бонусы) в облако Яндекса. */
+  function pushCloud() {
+    if (Yandex.cloudSet) Yandex.cloudSet(Storage.load());
+  }
+
+  /* =================================================================== ЯЗЫК */
+  // Применить текущий язык ко всему статическому тексту + перерисовать
+  // динамические части (открытые модалки, баннер итога, подсказку загрузки).
+  function applyLang() {
+    var nodes = document.querySelectorAll('[data-i18n]');
+    Array.prototype.forEach.call(nodes, function (n) {
+      n.textContent = t(n.getAttribute('data-i18n'));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-title]'), function (n) {
+      n.setAttribute('title', t(n.getAttribute('data-i18n-title')));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-aria]'), function (n) {
+      n.setAttribute('aria-label', t(n.getAttribute('data-i18n-aria')));
+    });
+    try { document.title = t('brand') + ' — Blackjack'; } catch (e) {}
+
+    // Фишки (aria), подсказка загрузки, кнопка звука.
+    if (els.chips) {
+      Array.prototype.forEach.call(els.chips.children, function (chip) {
+        chip.setAttribute('aria-label', t('bet.place', { v: chip.dataset.value }));
+      });
+    }
+    if (els['btn-play'] && els['btn-play'].hidden === false && els['loading-hint']) {
+      els['loading-hint'].textContent = t('loading.ready');
+    }
+
+    // Перерисовать открытые динамические представления.
+    if (state.lastResult && els['center-status'] && els['center-status'].firstChild) {
+      showResult(state.lastResult);
+    }
+    if (els['modal-stats'] && !els['modal-stats'].hidden) renderStats();
+    if (els['modal-leaders'] && !els['modal-leaders'].hidden) refreshLeaders();
+    if (els['modal-rules'] && !els['modal-rules'].hidden) renderRules();
+    if (els['modal-settings'] && !els['modal-settings'].hidden) renderSettings();
+    if (els['modal-shop'] && !els['modal-shop'].hidden) renderShop();
+  }
+
+  /* ================================================================= ПРАВИЛА */
+  function renderRules() {
+    var lines = I18n.tList('rules.body');
+    els['rules-body'].innerHTML = lines.map(function (line) {
+      return '<p class="rule-line">' + escapeHtml(line) + '</p>';
+    }).join('');
+  }
+
+  function openRules() {
+    Audio.play('click');
+    renderRules();
+    els['modal-rules'].hidden = false;
+  }
+
+  function closeRules() {
+    Audio.play('click');
+    els['modal-rules'].hidden = true;
+  }
+
+  /* =============================================================== НАСТРОЙКИ */
+  function renderSettings() {
+    var cur = I18n.getLang();
+    var langBtns = I18n.LANGS.map(function (l) {
+      return '<button class="lang-btn' + (l.code === cur ? ' active' : '') +
+        '" data-lang="' + l.code + '">' + escapeHtml(l.label) + '</button>';
+    }).join('');
+
+    var soundOn = Audio.isEnabled();
+    var hapticsOn = Haptics.isEnabled ? Haptics.isEnabled() : soundOn;
+
+    els['settings-body'].innerHTML =
+      '<div class="set-group"><div class="set-label">' + escapeHtml(t('settings.language')) + '</div>' +
+        '<div class="lang-grid">' + langBtns + '</div></div>' +
+      '<div class="set-row"><span>' + escapeHtml(t('settings.sound')) + '</span>' +
+        '<button class="toggle' + (soundOn ? ' on' : '') + '" id="set-sound">' +
+        escapeHtml(soundOn ? t('settings.on') : t('settings.off')) + '</button></div>' +
+      '<div class="set-row"><span>' + escapeHtml(t('settings.haptics')) + '</span>' +
+        '<button class="toggle' + (hapticsOn ? ' on' : '') + '" id="set-haptics">' +
+        escapeHtml(hapticsOn ? t('settings.on') : t('settings.off')) + '</button></div>';
+
+    // Навешиваем обработчики на свежесозданные элементы.
+    Array.prototype.forEach.call(els['settings-body'].querySelectorAll('.lang-btn'), function (b) {
+      b.addEventListener('click', function () {
+        Audio.play('click');
+        I18n.setLang(b.getAttribute('data-lang')); // setLang вызовет applyLang → renderSettings
+      });
+    });
+    var sBtn = document.getElementById('set-sound');
+    if (sBtn) sBtn.addEventListener('click', function () { toggleSound(); renderSettings(); });
+    var hBtn = document.getElementById('set-haptics');
+    if (hBtn) hBtn.addEventListener('click', function () { toggleHaptics(); renderSettings(); });
+  }
+
+  function openSettings() {
+    Audio.play('click');
+    renderSettings();
+    els['modal-settings'].hidden = false;
+  }
+
+  function closeSettings() {
+    Audio.play('click');
+    els['modal-settings'].hidden = true;
+  }
+
+  function toggleHaptics() {
+    var on = !(Haptics.isEnabled ? Haptics.isEnabled() : false);
+    Haptics.setEnabled(on);
+    Storage.update(function (d) { d.settings.haptics = on; });
+    pushCloud();
+    if (on) Haptics.tap();
+  }
+
+  /* ============================================================ МАГАЗИН ФИШЕК */
+  // Сколько раз пакет «3 рекламы» уже взят за последний час.
+  function packTimesInHour() {
+    var now = Date.now();
+    var times = (Storage.load().bonus.packTimes || []).filter(function (ts) {
+      return now - ts < HOUR_MS;
+    });
+    return times;
+  }
+
+  function fmtTime(ms) {
+    if (ms < 0) ms = 0;
+    var s = Math.ceil(ms / 1000);
+    var h = Math.floor(s / 3600); s -= h * 3600;
+    var m = Math.floor(s / 60); s -= m * 60;
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    return h > 0 ? (h + ':' + pad(m) + ':' + pad(s)) : (pad(m) + ':' + pad(s));
+  }
+
+  function creditAndRefresh(amount) {
+    engine.creditChips(amount);
+    updateCoins(true);
+    floatCoins(amount);
+    renderShop();
+  }
+
+  function renderShop() {
+    var hasAds = Yandex.hasSDK();
+    var bonus = Storage.load().bonus;
+    var now = Date.now();
+
+    // Ежедневный бонус.
+    var dailyReady = (now - (bonus.dailyAt || 0)) >= DAY_MS;
+    var dailyBtn = dailyReady
+      ? '<button class="btn btn-primary shop-btn" id="shop-daily">' + escapeHtml(t('shop.daily.claim')) + '</button>'
+      : '<button class="btn btn-ghost shop-btn" id="shop-daily" disabled>' +
+        escapeHtml(t('shop.daily.next', { t: fmtTime(DAY_MS - (now - (bonus.dailyAt || 0))) })) + '</button>';
+
+    // Пакет «3 рекламы» — лимит 2 раза в час.
+    var times = packTimesInHour();
+    var packLocked = times.length >= PACK_PER_HOUR;
+    var packBtn;
+    if (!hasAds) {
+      packBtn = '<button class="btn btn-ghost shop-btn" disabled>' + escapeHtml(t('shop.unavailable')) + '</button>';
+    } else if (packLocked) {
+      var oldest = Math.min.apply(null, times);
+      packBtn = '<button class="btn btn-ghost shop-btn" id="shop-pack" disabled>' +
+        escapeHtml(t('shop.ad3.locked', { t: fmtTime(HOUR_MS - (now - oldest)) })) + '</button>';
+    } else {
+      packBtn = '<button class="btn btn-primary shop-btn" id="shop-pack">' + escapeHtml(t('shop.ad3.btn')) + '</button>';
+    }
+
+    // Одиночная реклама.
+    var ad1Btn = hasAds
+      ? '<button class="btn btn-primary shop-btn" id="shop-ad1">' + escapeHtml(t('shop.ad1.btn')) + '</button>'
+      : '<button class="btn btn-ghost shop-btn" disabled>' + escapeHtml(t('shop.unavailable')) + '</button>';
+
+    function card(title, desc, btn) {
+      return '<div class="shop-item"><div class="shop-text"><b>' + escapeHtml(title) +
+        '</b><span>' + escapeHtml(desc) + '</span></div>' + btn + '</div>';
+    }
+
+    els['shop-body'].innerHTML =
+      card(t('shop.daily.title'), t('shop.daily.desc'), dailyBtn) +
+      card(t('shop.ad1.title'), t('shop.ad1.desc'), ad1Btn) +
+      card(t('shop.ad3.title'), t('shop.ad3.desc'), packBtn);
+
+    var d = document.getElementById('shop-daily');
+    if (d && dailyReady) d.addEventListener('click', onClaimDaily);
+    var a1 = document.getElementById('shop-ad1');
+    if (a1) a1.addEventListener('click', onWatchAd1);
+    var pk = document.getElementById('shop-pack');
+    if (pk && !packLocked && hasAds) pk.addEventListener('click', onWatchPack);
+  }
+
+  function onClaimDaily() {
+    Audio.play('chip');
+    Haptics.tap();
+    Storage.update(function (d) { d.bonus.dailyAt = Date.now(); });
+    pushCloud();
+    creditAndRefresh(DAILY_AMOUNT);
+  }
+
+  function onWatchAd1() {
+    var btn = document.getElementById('shop-ad1');
+    if (btn) btn.disabled = true;
+    Yandex.showRewardedVideo({
+      onRewarded: function () { creditAndRefresh(AD1_AMOUNT); },
+      onClose: function () { renderShop(); },
+      onError: function () { renderShop(); }
+    });
+  }
+
+  // Последовательно показываем PACK_ADS реклам; награда — только если все
+  // просмотрены полностью. Прогресс пишем в подпись кнопки.
+  function onWatchPack() {
+    var rewarded = 0;
+    var k = 0;
+    var btn = document.getElementById('shop-pack');
+
+    function setProgress() {
+      if (btn) btn.textContent = t('shop.ad3.progress', { k: k, n: PACK_ADS });
+    }
+
+    function playNext() {
+      if (k >= PACK_ADS) {
+        if (rewarded >= PACK_ADS) {
+          Storage.update(function (d) {
+            var now = Date.now();
+            var arr = (d.bonus.packTimes || []).filter(function (ts) { return now - ts < HOUR_MS; });
+            arr.push(now);
+            d.bonus.packTimes = arr;
+          });
+          pushCloud();
+          creditAndRefresh(PACK_AMOUNT);
+        } else {
+          renderShop(); // не досмотрел — без награды
+        }
+        return;
+      }
+      k += 1;
+      setProgress();
+      Yandex.showRewardedVideo({
+        onRewarded: function () { rewarded += 1; },
+        onClose: function () { playNext(); },
+        onError: function () { renderShop(); }
+      });
+    }
+
+    if (btn) btn.disabled = true;
+    playNext();
+  }
+
+  function openShop() {
+    Audio.play('click');
+    renderShop();
+    els['modal-shop'].hidden = false;
+    if (shopTimer) clearInterval(shopTimer);
+    // Живой отсчёт времени для заблокированных опций.
+    shopTimer = setInterval(function () {
+      if (els['modal-shop'].hidden) { clearInterval(shopTimer); shopTimer = null; return; }
+      renderShop();
+    }, 1000);
+  }
+
+  function closeShop() {
+    Audio.play('click');
+    els['modal-shop'].hidden = true;
+    if (shopTimer) { clearInterval(shopTimer); shopTimer = null; }
   }
 
   /* ------------------------------------------------------------------ старт */
@@ -574,6 +880,22 @@ BJ.UI = (function () {
     els['btn-leaders-auth'].addEventListener('click', onLeadersAuth);
     els['modal-leaders'].addEventListener('click', function (e) {
       if (e.target === els['modal-leaders']) closeLeaders();
+    });
+    // Старт-экран: магазин, настройки, правила.
+    els['btn-shop'].addEventListener('click', openShop);
+    els['btn-settings'].addEventListener('click', openSettings);
+    els['btn-rules'].addEventListener('click', openRules);
+    els['btn-shop-close'].addEventListener('click', closeShop);
+    els['btn-settings-close'].addEventListener('click', closeSettings);
+    els['btn-rules-close'].addEventListener('click', closeRules);
+    els['modal-shop'].addEventListener('click', function (e) {
+      if (e.target === els['modal-shop']) closeShop();
+    });
+    els['modal-settings'].addEventListener('click', function (e) {
+      if (e.target === els['modal-settings']) closeSettings();
+    });
+    els['modal-rules'].addEventListener('click', function (e) {
+      if (e.target === els['modal-rules']) closeRules();
     });
     // Разблокировка звука по первому касанию в любом месте.
     document.addEventListener('pointerdown', function once() {
@@ -606,6 +928,10 @@ BJ.UI = (function () {
       refreshSoundButton();
       updateCoins(false);
 
+      // Язык: сохранённый → окружение → браузер → ru, затем перевести интерфейс.
+      I18n.detectInitial();
+      applyLang();
+
       els['btn-play'].addEventListener('click', startGame);
     },
 
@@ -616,13 +942,16 @@ BJ.UI = (function () {
     setLoadingProgress: function (done, total) {
       var pct = Math.round((done / total) * 100);
       if (els['loading-fill']) els['loading-fill'].style.width = pct + '%';
-      if (els['loading-hint']) els['loading-hint'].textContent = 'Загрузка карт… ' + pct + '%';
+      if (els['loading-hint']) els['loading-hint'].textContent = t('loading.cards', { pct: pct });
     },
 
     /** Ассеты готовы — показываем кнопку «Играть». */
     onAssetsReady: function () {
-      if (els['loading-hint']) els['loading-hint'].textContent = 'Готово!';
+      if (els['loading-hint']) els['loading-hint'].textContent = t('loading.ready');
       if (els['btn-play']) els['btn-play'].hidden = false;
-    }
+    },
+
+    /** Применить текущий язык ко всему интерфейсу (вызывается из I18n.setLang). */
+    applyLang: applyLang
   };
 })();

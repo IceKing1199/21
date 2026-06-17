@@ -14,7 +14,10 @@ BJ.Storage = (function () {
   // Значения по умолчанию для нового игрока.
   var DEFAULTS = {
     balance: 1000,
-    settings: { sound: true, haptics: true },
+    settings: { sound: true, haptics: true, lang: '' },
+    // Магазин/бонусы: dailyAt — время последнего ежедневного бонуса (мс);
+    // packTimes — времена выдач пакета «3 рекламы» (для лимита 2 раза в час).
+    bonus: { dailyAt: 0, packTimes: [] },
     stats: {
       hands: 0,
       wins: 0,
