@@ -17,6 +17,14 @@ BJ.Audio = (function () {
   var enabled = true;
   var unlocked = false;
 
+  // Звуки, проигрываемые из реальных аудиофайлов (остальные синтезируются ниже).
+  var SAMPLE_URLS = {
+    shuffle: 'assets/sounds/shuffle.wav', // перемешивание колоды
+    deal:    'assets/sounds/deal.wav'     // раздача карты
+  };
+  var buffers = {};        // name -> AudioBuffer (после декодирования)
+  var preloadStarted = false;
+
   function ensureContext() {
     if (ctx) return ctx;
     var AC = window.AudioContext || window.webkitAudioContext;
@@ -42,9 +50,54 @@ BJ.Audio = (function () {
       s.start(0);
       unlocked = true;
     }
+    preload(); // подстраховка: гарантируем загрузку сэмплов после жеста
   }
 
   function now() { return ctx ? ctx.currentTime : 0; }
+
+  /* --- загрузка и воспроизведение аудиофайлов --- */
+
+  // Декодирует один файл в AudioBuffer (декодирование работает и в suspended-контексте).
+  function loadSample(name, url) {
+    var c = ensureContext();
+    if (!c) return;
+    fetch(url)
+      .then(function (r) { return r.arrayBuffer(); })
+      .then(function (buf) {
+        return new Promise(function (resolve, reject) {
+          // callback-форма decodeAudioData надёжнее в старых WebKit
+          c.decodeAudioData(buf, resolve, reject);
+        });
+      })
+      .then(function (audioBuffer) { buffers[name] = audioBuffer; })
+      .catch(function () { /* файл недоступен — play() откатится на синтез */ });
+  }
+
+  // Заранее декодирует все файлы (вызывается на экране загрузки).
+  function preload() {
+    if (preloadStarted) return;
+    preloadStarted = true;
+    if (!ensureContext()) return;
+    Object.keys(SAMPLE_URLS).forEach(function (name) {
+      loadSample(name, SAMPLE_URLS[name]);
+    });
+  }
+
+  // Воспроизводит готовый сэмпл. Новый источник на каждый вызов — корректное
+  // наложение при быстрой раздаче нескольких карт.
+  function playSample(name) {
+    if (!enabled) return false;
+    var c = ensureContext();
+    if (!c || !buffers[name]) return false;
+    var src = c.createBufferSource();
+    src.buffer = buffers[name];
+    var gain = c.createGain();
+    gain.gain.value = 0.8;
+    src.connect(gain);
+    gain.connect(master);
+    src.start(0);
+    return true;
+  }
 
   /* --- низкоуровневые помощники синтеза --- */
 
@@ -154,12 +207,17 @@ BJ.Audio = (function () {
 
   return {
     unlock: unlock,
+    preload: preload,
     setEnabled: function (v) { enabled = !!v; if (v) unlock(); },
     isEnabled: function () { return enabled; },
     play: function (name) {
       if (!enabled) return;
       ensureContext();
       if (ctx && ctx.state === 'suspended') ctx.resume();
+      // Сначала пробуем реальный аудиофайл; если не загружен — синтезируем.
+      if (SAMPLE_URLS[name]) {
+        if (playSample(name)) return;
+      }
       if (SFX[name]) SFX[name]();
     }
   };

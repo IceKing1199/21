@@ -207,7 +207,8 @@ BJ.UI = (function () {
   function startRound(bet) {
     state.busy = true;
     Storage.update(function (d) { d.settings.lastBet = bet; });
-    engine.newRound(bet);
+    engine.newRound(bet);       // свежая колода перемешивается
+    Audio.play('shuffle');      // звук перемешивания в начале раздачи
     updateCoins(true);          // ставка списана
     showControls('action');
     setActionsEnabled(false);

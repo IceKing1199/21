@@ -13,6 +13,9 @@
 
     BJ.UI.init();
 
+    // Заранее декодируем аудиофайлы (перемешивание, раздача) на экране загрузки.
+    BJ.Audio.preload();
+
     BJ.Assets.preloadAll(function (done, total) {
       BJ.UI.setLoadingProgress(done, total);
     }).then(function () {
